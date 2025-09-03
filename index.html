@@ -1,0 +1,2202 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rod Properties and Figure</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["$", "$"],
+            ["\\(", "\\)"]
+          ],
+          displayMath: [
+            ["$$", "$$"],
+            ["\\[", "\\]"]
+          ]
+        },
+        options: {
+          renderActions: {
+            addMenu: [0, "", ""]
+          }
+        }
+      }
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+      /* Use Inter font for a clean, modern look */
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap");
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: #f3f4f6;
+      }
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+        /* display: none; <- Crashes Chrome on hover */
+        -webkit-appearance: none;
+        margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+      }
+
+      .canvas-container {
+        position: relative;
+        width: 100%;
+        padding-top: 56.25%; /* 16:9 Aspect Ratio */
+        margin-top: 1rem;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      }
+      canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #fff; /* White background to match the original */
+      }
+      .message-box {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 1.5rem;
+        background-color: #fff;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        z-index: 1000;
+      }
+      .highlight {
+        background-color: rgba(255, 230, 0, 0.5);
+      }
+      .highlight-border {
+        border: 2px solid yellow;
+      }
+      .red-text {
+        color: red;
+      }
+      .black-text {
+        color: black;
+      }
+    </style>
+  </head>
+  <body class="p-6 md:p-12">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">1D Rod System</h1>
+    <div class="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg">
+      <h2 class="pb-4">Consider a system of horizonal rods connected at the following nodes:</h2>
+      <h2></h2>
+      <div id="table-container-nodes" class="overflow-x-auto mb-8"></div>
+      <h2 class="pb-4">The rods have the following properties:</h2>
+      <div id="table-container-rods" class="overflow-x-auto"></div>
+      <h2 id="forceDisplay" class="mb-4 py-4">The system is loaded by forces F1=sss and F2=ddd</h2>
+      <div class="mt-8 mb-8 text-center">
+        <button id="regenerateButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">Generate New Values</button>
+      </div>
+
+      <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Dynamic Figure Drawing</h1>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-6">
+        <div>
+          <label for="l1" class="block text-sm font-medium text-gray-700">L1</label>
+          <input type="number" id="l1" value="150" min="10" max="400" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+        </div>
+        <div>
+          <label for="l2" class="block text-sm font-medium text-gray-700">L2</label>
+          <input type="number" id="l2" value="100" min="10" max="400" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+        </div>
+        <div>
+          <label for="l5" class="block text-sm font-medium text-gray-700">L5</label>
+          <input type="number" id="l5" value="200" min="10" max="400" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+        </div>
+        <div>
+          <label for="f1" class="block text-sm font-medium text-gray-700">F1 (N)</label>
+          <input type="number" id="f1" value="-1000" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm" />
+        </div>
+        <div>
+          <label for="f2" class="block text-sm font-medium text-gray-700">F2 (N)</label>
+          <input type="number" id="f2" value="2000" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150" />
+        </div>
+        <button id="drawButton" class="w-full bg-white-600 hover:bg-white-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">Draw Figure</button>
+      </div>
+
+      <div class="canvas-container">
+        <canvas id="drawingCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="mt-8 mb-8 text-center">
+      <button id="solutionButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">Solution</button>
+    </div>
+
+    <div id="table-container-solution" class="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mt-8 hidden">
+      <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Connectivity Table</h1>
+      <div id="connectivity-table-container" class="overflow-x-auto"></div>
+      <div class="mt-4 text-center">
+        <button id="checkConnectivityButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">Check</button>
+      </div>
+    </div>
+
+    <!-- Element 1 Analysis -->
+    <div id="next-step-info-container" class="max-w-4xl mx-auto bg-white p-6 md:p-8 rounded-xl shadow-lg mt-8 hidden">
+      <div id="element-analysis-container" class="space-y-4 mb-4"></div>
+      <div id="element-analysis-container2" class="space-y-4 mb-4"></div>
+      <div id="global-stiffness-matrix-container0" class="mt-8"></div>
+      <div id="global-stiffness-matrix-container" class="mt-8"></div>
+      <div id="final-message-container" class="mt-8">
+        <h2 class="text-xl font-bold text-green-600">Global Stiffness Matrix has been formed</h2>
+      </div>
+      <div id="load-vector-container" class="mt-8 hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Load Vector:</h2>
+        <div id="load-vector" class="p-4 bg-gray-100 rounded-lg overflow-x-auto"></div>
+      </div>
+
+      <div id="reduced-matrix-container" class="mt-8 hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Reduced Stiffness Matrix:</h2>
+        <div id="reduced-matrix" class="p-4 bg-gray-100 rounded-lg overflow-x-auto"></div>
+      </div>
+
+      <div id="reduced-load-vector-container" class="mt-8 hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Reduced Load Vector:</h2>
+        <div id="reduced-load-vector" class="p-4 bg-gray-100 rounded-lg overflow-x-auto"></div>
+      </div>
+      <div id="inversed-matrix-container" class="mt-8 hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Inversed Stiffness Matrix ($[K_{reduced}]^{-1}$):</h2>
+        <div id="inversed-matrix" class="p-4 bg-gray-100 rounded-lg overflow-x-auto"></div>
+      </div>
+      <div id="displacements-container" class="mt-8 hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Unknown Displacements ($\{u\}_{reduced}$):</h2>
+        <div id="displacements" class="p-4 bg-gray-100 rounded-lg overflow-x-auto"></div>
+      </div>
+      <div id="full-displacements-container" class="mt-8 hidden">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Displacement Vector ($\{u\}$):</h2>
+        <div id="full-displacements" class="p-4 bg-gray-100 rounded-lg overflow-x-auto"></div>
+      </div>
+      <!-- NEW CONTAINER FOR ELEMENT-BY-ELEMENT ANALYSIS -->
+      <div id="element-results-container" class="mt-8 hidden">
+        <h2 id="element-results-title" class="text-2xl font-bold text-gray-800 mb-6 text-center">Element 1 Results</h2>
+        <div id="element-nodal-displacements" class="p-4 bg-gray-100 rounded-lg overflow-x-auto"></div>
+        <div id="element-load-vector" class="p-4 bg-gray-100 rounded-lg overflow-x-auto mt-4"></div>
+        <div id="element-stress" class="p-4 bg-gray-100 rounded-lg overflow-x-auto mt-4"></div>
+      </div>
+      <!-- END OF NEW CONTAINER -->
+    </div>
+
+    <div class="mt-8 mb-8 text-center hidden" id="next-step-button-container">
+      <button id="nextStepButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition ease-in-out duration-150">Next Step</button>
+    </div>
+
+    <div id="element-next-step-button-container" class="mt-8 mb-8 text-center hidden">
+      <button id="elementNextStepButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition ease-in-out duration-150">Next Step (Element 1)</button>
+    </div>
+    <div id="result-next-step-button-container" class="mt-8 mb-8 text-center hidden">
+      <button id="resultsNextStepButton" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition ease-in-out duration-150">Next Step (Element 1)</button>
+    </div>
+
+    <div id="messageBox" class="message-box">
+      <p id="messageText" class="text-gray-800"></p>
+      <button id="closeMessage" class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md shadow-md">Close</button>
+    </div>
+    <script>
+      // Global variables to store the generated rod properties and state
+      //
+      let iSolution = {
+        connectivityTable: 1,
+        lengthAndStiffness: 1,
+        globalStiffness: 1,
+        loadVector: 1,
+        reducedStiffness: 1,
+        reducedLoadVector: 1,
+        inversedStiffness: 1,
+        unknownDisplacements: 1,
+        fullDisplacements: 1,
+        finalSteps: 1
+      }
+      let globalLengths = []
+      let globalAreas = []
+      let globalStiffnesses = []
+      let globalNodes = []
+      let globalConnectivity = []
+      let globalStiffnessMatrix = [
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0],
+        [0, 0, 0, 0]
+      ]
+      let iFixed = 2 // The fixed node index (Node 1 is at index 0)
+      let currentElementIndex = 0
+      const totalElements = 5
+	  function getRandomInteger(min, max) {
+    /**
+     * Generates a random integer between min and max (inclusive).
+     * @param {number} min - The minimum value (inclusive).
+     * @param {number} max - The maximum value (inclusive).
+     * @returns {number} A random integer.
+     */
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+      let forceF1 = getRandomInteger(-500, 500) // Initial value for F1
+      let forceF2 = 2000 // Initial value for F2
+      let globalLoads = [0, 0, 0, 0] // Load vector
+      let globalDisplacements = [] // To store the full displacement vector
+
+      // Wait for the DOM to be fully loaded before running the script
+      document.addEventListener("DOMContentLoaded", () => {
+        // --- Table Generation Logic ---
+        const regenerateButton = document.getElementById("regenerateButton")
+        const solutionButton = document.getElementById("solutionButton")
+        const nextStepButtonContainer = document.getElementById("next-step-button-container")
+        const nextStepButton = document.getElementById("nextStepButton")
+        const elementNextStepButtonContainer = document.getElementById("element-next-step-button-container")
+        const elementNextStepButton = document.getElementById("elementNextStepButton")
+        const resultsNextStepButtonContainer = document.getElementById("result-next-step-button-container")
+        const resultsNextStepButton = document.getElementById("resultsNextStepButton")
+        const rodsTableContainer = document.getElementById("table-container-rods")
+        const nodesTableContainer = document.getElementById("table-container-nodes")
+        const connectivityTableContainer = document.getElementById("connectivity-table-container")
+        const solutionSection = document.getElementById("table-container-solution")
+        const nextStepInfoContainer = document.getElementById("next-step-info-container")
+        const elementAnalysisContainer = document.getElementById("element-analysis-container")
+        const elementAnalysisContainer2 = document.getElementById("element-analysis-container2")
+        const globalStiffnessMatrixContainer0 = document.getElementById("global-stiffness-matrix-container0")
+        const globalStiffnessMatrixContainer = document.getElementById("global-stiffness-matrix-container")
+        const finalMessageContainer = document.getElementById("final-message-container")
+        const prereducedMatrixContainer = document.getElementById("prereduced-matrix-container")
+        const reducedMatrixContainer = document.getElementById("reduced-matrix-container")
+        const loadVectorContainer = document.getElementById("load-vector-container")
+        const reducedLoadVectorContainer = document.getElementById("reduced-load-vector-container")
+        const inversedMatrixContainer = document.getElementById("inversed-matrix-container")
+        const displacementsContainer = document.getElementById("displacements-container")
+        const fullDisplacementsContainer = document.getElementById("full-displacements-container")
+        const elementResultsContainer = document.getElementById("element-results-container")
+        const elementResultsTitle = document.getElementById("element-results-title")
+        const elementNodalDisplacements = document.getElementById("element-nodal-displacements")
+        const elementLoadVector = document.getElementById("element-load-vector")
+        const elementStress = document.getElementById("element-stress")
+        const checkConnectivityButton = document.getElementById("checkConnectivityButton")
+
+        const l1Input = document.getElementById("l1")
+        const l2Input = document.getElementById("l2")
+        const l5Input = document.getElementById("l5")
+        const f1Input = document.getElementById("f1") // Reference to F1 input
+        const f2Input = document.getElementById("f2") // Reference to F2 input
+        const forceDisplay = document.getElementById("forceDisplay") // Reference to the h2 for force display
+
+        /**
+         * Generates a random number within a specified range and rounds it to a given decimal place.
+         * @param {number} min The minimum value of the range.
+         * @param {number} max The maximum value of the range.
+         * @param {number} decimals The number of decimal places to round to.
+         * @returns {number} The generated random number.
+         */
+        const getRandomNumber = (min, max, decimals) => {
+          const value = Math.random() * (max - min) + min
+          return parseFloat(value.toFixed(decimals))
+        }
+
+        /**
+         * Creates and displays the table with randomly generated rod properties.
+         */
+        const createRodTable = () => {
+          rodsTableContainer.innerHTML = "" // Clear existing content
+
+          const L1 = parseFloat(l1Input.value)
+          const L2 = parseFloat(l2Input.value)
+          const L5 = parseFloat(l5Input.value)
+          const numRods = 5
+          globalLengths = [L1, L2, L2, L1 - L2, L5]
+          globalAreas = Array.from({ length: numRods }, () => getRandomNumber(100, 500, 2))
+          globalStiffnesses = Array.from({ length: numRods }, () => getRandomNumber(70, 210, 1))
+
+          const table = document.createElement("table")
+          table.className = "min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg"
+
+          const tableHead = document.createElement("thead")
+          tableHead.className = "bg-gray-50"
+
+          const headers = ["Rod #", `Area ($mm^2$)`, `Young's Modulus ($GPa$)`]
+
+          const headerRow = document.createElement("tr")
+          headers.forEach(headerText => {
+            const headerCell = document.createElement("th")
+            headerCell.scope = "col"
+            headerCell.className = "px-6 py-3 text-left text-xs font-medium text-gray-500 tracking-wider"
+            headerCell.innerHTML = headerText
+            headerRow.appendChild(headerCell)
+          })
+
+          tableHead.appendChild(headerRow)
+          table.appendChild(tableHead)
+
+          const tableBody = document.createElement("tbody")
+          tableBody.className = "bg-white divide-y divide-gray-200"
+
+          for (let i = 0; i < numRods; i++) {
+            const row = document.createElement("tr")
+
+            const rodNumberCell = document.createElement("td")
+            rodNumberCell.className = "px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+            rodNumberCell.textContent = i + 1
+
+            const areaCell = document.createElement("td")
+            areaCell.className = "px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+            areaCell.textContent = globalAreas[i]
+
+            const stiffnessCell = document.createElement("td")
+            stiffnessCell.className = "px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+            stiffnessCell.textContent = globalStiffnesses[i]
+
+            row.appendChild(rodNumberCell)
+            row.appendChild(areaCell)
+            row.appendChild(stiffnessCell)
+
+            tableBody.appendChild(row)
+          }
+
+          table.appendChild(tableBody)
+          rodsTableContainer.appendChild(table)
+
+          if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise()
+          }
+        }
+
+        /**
+         * Creates and displays the table with node numbers and x-coordinates.
+         */
+        const createNodeTable = () => {
+          nodesTableContainer.innerHTML = "" // Clear existing content
+
+          const L1 = parseFloat(l1Input.value)
+          const L2 = parseFloat(l2Input.value)
+          const L5 = parseFloat(l5Input.value)
+
+          // Define the node data based on the figure layout
+          globalNodes = [
+            { number: 1, x: 0 },
+            { number: 2, x: L2 },
+            { number: 3, x: L1 },
+            { number: 4, x: L1 + L5 }
+          ]
+
+          const table = document.createElement("table")
+          table.className = "min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg"
+
+          const tableHead = document.createElement("thead")
+          tableHead.className = "bg-gray-50"
+
+          const headers = ["Node #", "x-coordinate, m"]
+
+          const headerRow = document.createElement("tr")
+          headers.forEach(headerText => {
+            const headerCell = document.createElement("th")
+            headerCell.scope = "col"
+            headerCell.className = "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            headerCell.textContent = headerText
+            headerRow.appendChild(headerCell)
+          })
+
+          tableHead.appendChild(headerRow)
+          table.appendChild(tableHead)
+
+          const tableBody = document.createElement("tbody")
+          tableBody.className = "bg-white divide-y divide-gray-200"
+
+          globalNodes.forEach(node => {
+            const row = document.createElement("tr")
+
+            const nodeNumberCell = document.createElement("td")
+            nodeNumberCell.className = "px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+            nodeNumberCell.textContent = node.number
+
+            const xCoordinateCell = document.createElement("td")
+            xCoordinateCell.className = "px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+            xCoordinateCell.textContent = node.x
+
+            row.appendChild(nodeNumberCell)
+            row.appendChild(xCoordinateCell)
+
+            tableBody.appendChild(row)
+          })
+
+          table.appendChild(tableBody)
+          nodesTableContainer.appendChild(table)
+        }
+
+        const createConnectivityTable = () => {
+          connectivityTableContainer.innerHTML = "" // Clear existing content
+          solutionSection.classList.remove("hidden") // Show the solution section
+          nextStepInfoContainer.classList.add("hidden") // Hide next step info container
+          nextStepButtonContainer.classList.add("hidden") // Hide the Next Step button
+          elementNextStepButtonContainer.classList.add("hidden") // Hide the element next step button
+
+          globalConnectivity = [
+            { element: 1, node1: 1, node2: 3 },
+            { element: 2, node1: 1, node2: 2 },
+            { element: 3, node1: 1, node2: 2 },
+            { element: 4, node1: 2, node2: 3 },
+            { element: 5, node1: 3, node2: 4 }
+          ]
+
+          const table = document.createElement("table")
+          table.className = "min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg"
+
+          const tableHead = document.createElement("thead")
+          tableHead.className = "bg-gray-50"
+
+          const headers = ["Element Number", "Node 1", "Node 2"]
+
+          const headerRow = document.createElement("tr")
+          headers.forEach(headerText => {
+            const headerCell = document.createElement("th")
+            headerCell.scope = "col"
+            headerCell.className = "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            headerCell.textContent = headerText
+            headerRow.appendChild(headerCell)
+          })
+
+          tableHead.appendChild(headerRow)
+          table.appendChild(tableHead)
+
+          const tableBody = document.createElement("tbody")
+          tableBody.className = "bg-white divide-y divide-gray-200"
+
+          for (let i = 0; i < totalElements; i++) {
+            const row = document.createElement("tr")
+            const correctData = globalConnectivity[i] // Get the correct data for the current element
+
+            row.dataset.elementIndex = i
+
+            const elementCell = document.createElement("td")
+            elementCell.className = "px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900"
+            elementCell.textContent = i + 1
+
+            const node1Cell = document.createElement("td")
+            node1Cell.className = "px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+            const node1Input = document.createElement("input")
+            node1Input.type = "number"
+            node1Input.className = "w-16 border border-gray-300 rounded-md p-1 text-center"
+            node1Input.min = "1"
+            node1Input.max = "4"
+            node1Input.dataset.nodeType = "node1"
+
+            node1Cell.appendChild(node1Input)
+
+            const node2Cell = document.createElement("td")
+            node2Cell.className = "px-6 py-4 whitespace-nowrap text-sm text-gray-700"
+            const node2Input = document.createElement("input")
+            node2Input.type = "number"
+            node2Input.className = "w-16 border border-gray-300 rounded-md p-1 text-center"
+            node2Input.min = "1"
+            node2Input.max = "4"
+            node2Input.dataset.nodeType = "node2"
+
+            node2Cell.appendChild(node2Input)
+
+            row.appendChild(elementCell)
+            row.appendChild(node1Cell)
+            row.appendChild(node2Cell)
+            if (iSolution.connectivityTable === 1) {
+              node1Input.value = correctData.node1
+              node2Input.value = correctData.node2
+              document.getElementById("checkConnectivityButton").style.display = "none"
+              nextStepInfoContainer.classList.remove("hidden")
+              nextStepButtonContainer.classList.remove("hidden")
+              document.getElementById("checkConnectivityButton").style.display = "none"
+            }
+
+            tableBody.appendChild(row)
+          }
+
+          table.appendChild(tableBody)
+          connectivityTableContainer.appendChild(table)
+        }
+
+        const checkConnectivity = () => {
+          let allCorrect = true
+          const rows = connectivityTableContainer.querySelectorAll("tbody tr")
+          rows.forEach(row => {
+            const index = parseInt(row.dataset.elementIndex)
+            const correctData = globalConnectivity[index]
+
+            const node1Input = row.querySelector('input[data-node-type="node1"]')
+            const node2Input = row.querySelector('input[data-node-type="node2"]')
+
+            const node1Value = parseInt(node1Input.value)
+            const node2Value = parseInt(node2Input.value)
+
+            // Reset styling
+            node1Input.classList.remove("red-text")
+            node2Input.classList.remove("red-text")
+
+            // Check Node 1
+            if (node1Value !== correctData.node1) {
+              node1Input.classList.add("red-text")
+              allCorrect = false
+            }
+
+            // Check Node 2
+            if (node2Value !== correctData.node2) {
+              node2Input.classList.add("red-text")
+              allCorrect = false
+            }
+          })
+
+          if (allCorrect) {
+            showMessage("All connectivity values are correct! You may now proceed.")
+            nextStepInfoContainer.classList.remove("hidden")
+            nextStepButtonContainer.classList.remove("hidden")
+            document.getElementById("checkConnectivityButton").style.display = "none"
+          } else {
+            showMessage("Some values are incorrect. Please try again.")
+          }
+        }
+
+        const showNextStep = () => {
+          if (iSolution.lengthAndStiffness === 0 || iSolution.globalStiffness === 0) {
+            nextStepButton.disabled = true
+            nextStepButton.classList.add("opacity-50", "cursor-not-allowed")
+          }
+
+          if (currentElementIndex === 5) {
+            // All elements added, now show the final message and highlight the matrix
+            finalMessageContainer.classList.remove("hidden")
+            nextStepButton.disabled = true
+            nextStepButton.classList.add("hidden")
+            displayLoadVector()
+
+            // Highlight the final global stiffness matrix
+
+            // Display the reduced matrix
+
+            // Show the element-by-element analysis button
+            //elementNextStepButtonContainer.classList.remove("hidden")
+            //elementNextStepButton.textContent = `Next Step (Element 1)`
+
+            return // Stop if all elements are processed
+          }
+
+          // Data for the current element
+          const elementData = globalConnectivity[currentElementIndex]
+          if (!elementData) return
+
+          const elementNumber = elementData.element
+          const node1 = globalNodes.find(n => n.number === elementData.node1)
+          const node2 = globalNodes.find(n => n.number === elementData.node2)
+          const length = globalLengths[currentElementIndex]
+          const area = globalAreas[currentElementIndex]
+          const stiffness = globalStiffnesses[currentElementIndex]
+
+          const elementLength = Math.abs(node2.x - node1.x)
+          const elementStiffnessValue = (stiffness * 10 ** 9 * area * 10 ** -6) / elementLength // Convert GPa and mm^2 to Pa and m^2
+
+          // Assemble the global stiffness matrix
+          const node1Index = elementData.node1 - 1
+          const node2Index = elementData.node2 - 1
+          // Add the correct stiffness matrix to the global matrix
+
+          // Length and Stiffness Skip
+
+          if (iSolution.lengthAndStiffness === 1) {
+            //nextStepButton.disabled = false
+            //nextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+            elementAnalysisContainer.innerHTML = `
+                           <h2 class="text-xl font-bold text-gray-800 mb-4">Element ${elementNumber} Analysis</h2>
+                           <p class="text-sm text-gray-700"><span class="font-semibold">Element Length:</span> $L_{${elementNumber}} = x_{${elementData.node2}} - x_{${elementData.node1}} = ${node2.x} - ${node1.x} = ${elementLength}$ m</p>
+                           <p class="text-sm text-gray-700"><span class="font-semibold">Element Stiffness:</span> $k_{${elementNumber}} = \\frac{E_{${elementNumber}}A_{${elementNumber}}}{L_{${elementNumber}}} = \\frac{(${stiffness} \\times 10^{9} \\frac{N}{m^2}) \\times (${area} \\times 10^{-6} m^2)}{${elementLength} m} \\approx ${elementStiffnessValue.toFixed(2)}$ N/m</p>
+                           <p class="text-sm text-gray-700"><span class="font-semibold">Element Stiffness Matrix:</span></p>
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               K_{${elementNumber}} = k_{${elementNumber}}
+                               \\begin{bmatrix}
+                               1 & -1 \\\\
+                               -1 & 1
+                               \\end{bmatrix} =
+                               ${elementStiffnessValue.toFixed(2)}
+                               \\begin{bmatrix}
+                               1 & -1 \\\\
+                               -1 & 1
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+          } else {
+            elementAnalysisContainer.innerHTML = `
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Element ${elementNumber} Analysis</h2>
+            <div class="space-y-4">
+            	<div>
+            		<label for="input-length-${elementNumber}" class="block text-sm font-medium text-gray-700">Element Length ($L_{${elementNumber}}$)</label>
+            		<input type="number" id="input-length-${elementNumber}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            		<p id="length-feedback-${elementNumber}" class="text-sm mt-1"></p>
+            	</div>
+            	<div>
+            		<label for="input-stiffness-${elementNumber}" class="block text-sm font-medium text-gray-700">Element Stiffness ($k_{${elementNumber}}$)</label>
+            		<input type="number" id="input-stiffness-${elementNumber}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+            		<p id="stiffness-feedback-${elementNumber}" class="text-sm mt-1"></p>
+            	</div>
+            	<button id="check-button-${elementNumber}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+            		Check
+            	</button>
+            </div>
+            	`
+            document.getElementById(`check-button-${elementNumber}`).addEventListener("click", () => {
+              let isCorrect = true
+
+              const inputLength = parseFloat(document.getElementById(`input-length-${elementNumber}`).value)
+              const inputStiffness = parseFloat(document.getElementById(`input-stiffness-${elementNumber}`).value)
+
+              const lengthFeedback = document.getElementById(`length-feedback-${elementNumber}`)
+              const stiffnessFeedback = document.getElementById(`stiffness-feedback-${elementNumber}`)
+
+              // Reset feedback
+              lengthFeedback.textContent = ``
+              stiffnessFeedback.textContent = ""
+              document.getElementById(`input-length-${elementNumber}`).classList.remove("red-text")
+              document.getElementById(`input-stiffness-${elementNumber}`).classList.remove("red-text")
+              if (isNaN(inputLength)) {
+                lengthFeedback.textContent = `Enter element length`
+                lengthFeedback.classList.add("red-text")
+                isCorrect = false
+              }
+              if (isNaN(inputStiffness)) {
+                stiffnessFeedback.textContent = `Enter element stiffness`
+                stiffnessFeedback.classList.add("red-text")
+                isCorrect = false
+              }
+              // Check length
+
+              //-- CHANGE TOLERANCE IF NEEDED -- Length
+              if (Math.abs(inputLength - length) > 0.1) {
+                lengthFeedback.textContent = `Incorrect. The correct length is ${length} m.`
+                lengthFeedback.classList.add("red-text")
+                document.getElementById(`input-length-${elementNumber}`).classList.add("red-text")
+                isCorrect = false
+              }
+
+              // Check stiffness
+              //-- CHANGE TOLERANCE IF NEEDED -- Stiffness
+              if (Math.abs(inputStiffness - elementStiffnessValue) > 0.1) {
+                stiffnessFeedback.textContent = `Incorrect. The correct stiffness is ${elementStiffnessValue.toFixed(2)} N/m.`
+                stiffnessFeedback.classList.add("red-text")
+                document.getElementById(`input-stiffness-${elementNumber}`).classList.add("red-text")
+                isCorrect = false
+              }
+              if (isCorrect) {
+                showMessage("Correct! The calculations are accurate. \nProceed to the next step.")
+                //Remove later
+                if (iSolution.globalStiffness != 0) {
+                  nextStepButton.disabled = false
+                  nextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+                }
+
+                elementAnalysisContainer2.innerHTML = `
+            	<h2 class="text-xl font-bold text-gray-800 mb-4">Element ${elementNumber} Analysis</h2>
+            	<p class="text-sm text-gray-700"><span class="font-semibold">Element Length:</span> $L_{${elementNumber}} = x_{${elementData.node2}} - x_{${elementData.node1}} = ${node2.x} - ${node1.x} = ${elementLength}$ m</p><p class="text-sm text-gray-700"><span class="font-semibold">Element Length:</span> $L_{${elementNumber}} = x_{${elementData.node2}} - x_{${elementData.node1}} = ${node2.x} - ${node1.x} = ${elementLength}$ m</p>
+            	<p class="text-sm text-gray-700"><span class="font-semibold">Element Stiffness:</span> $k_{${elementNumber}} = \\frac{E_{${elementNumber}}A_{${elementNumber}}}{L_{${elementNumber}}} = \\frac{(${stiffness} \\times 10^{9} \\frac{N}{m^2}) \\times (${area} \\times 10^{-6} m^2)}{${elementLength} m} \\approx ${elementStiffnessValue.toFixed(2)}$ N/m</p>
+            	<p class="text-sm text-gray-700"><span class="font-semibold">Element Stiffness Matrix:</span></p>
+            	<div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            		$$
+            		K_{${elementNumber}} = k_{${elementNumber}}
+            		\\begin{bmatrix}
+            		1 & -1 \\\\
+            		-1 & 1
+            		\\end{bmatrix} =
+            		${elementStiffnessValue.toFixed(2)}
+            		\\begin{bmatrix}
+            		1 & -1 \\\\
+            		-1 & 1
+            		\\end{bmatrix}
+            		$$
+            	</div>
+            `
+                MathJax.typeset()
+              } else {
+                console.log("error")
+              }
+            })
+
+            //const checkGlobalStiffnessMatrix = () => {
+          }
+
+          globalStiffnessMatrixContainer0.innerHTML = ""
+
+          let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Global Stiffness Matrix (before adding element ${elementNumber})</h2>`
+          matrixHtml += `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               K_{global} =
+                               \\begin{bmatrix}
+                               ${globalStiffnessMatrix[0].map(val => val.toFixed(2)).join(" & ")} \\\\
+                               ${globalStiffnessMatrix[1].map(val => val.toFixed(2)).join(" & ")} \\\\
+                               ${globalStiffnessMatrix[2].map(val => val.toFixed(2)).join(" & ")} \\\\
+                               ${globalStiffnessMatrix[3].map(val => val.toFixed(2)).join(" & ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+          globalStiffnessMatrixContainer0.innerHTML = matrixHtml
+          if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise()
+          }
+
+          globalStiffnessMatrix[node1Index][node1Index] += elementStiffnessValue
+          globalStiffnessMatrix[node1Index][node2Index] -= elementStiffnessValue
+          globalStiffnessMatrix[node2Index][node1Index] -= elementStiffnessValue
+          globalStiffnessMatrix[node2Index][node2Index] += elementStiffnessValue
+
+          //Global Stiffness Skip
+
+          if (iSolution.globalStiffness === 1) {
+            globalStiffnessMatrixContainer.innerHTML = ""
+
+            matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Global Stiffness Matrix (after adding element ${elementNumber})</h2>`
+            matrixHtml += `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               K_{global} =
+                               \\begin{bmatrix}
+                               ${globalStiffnessMatrix[0].map(val => val.toFixed(2)).join(" & ")} \\\\
+                               ${globalStiffnessMatrix[1].map(val => val.toFixed(2)).join(" & ")} \\\\
+                               ${globalStiffnessMatrix[2].map(val => val.toFixed(2)).join(" & ")} \\\\
+                               ${globalStiffnessMatrix[3].map(val => val.toFixed(2)).join(" & ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            globalStiffnessMatrixContainer.innerHTML = matrixHtml
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+          } else {
+            const checkButtonHtml = `<div class="mt-4 text-center">
+            <button id="checkMatrixButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+            	Check Global Matrix
+            </button>
+            </div>`
+            globalStiffnessMatrixContainer.innerHTML = ""
+
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Enter the Global Stiffness Matrix</h2>`
+            matrixHtml += `<div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200"><tbody>`
+
+            for (let i = 0; i < 4; i++) {
+              matrixHtml += `<tr>`
+              for (let j = 0; j < 4; j++) {
+                matrixHtml += `<td class="px-2 py-2 whitespace-nowrap text-sm text-gray-700">
+            		<input type="number" step="any" id="k-${i}-${j}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            	</td>`
+              }
+              matrixHtml += `</tr>`
+            }
+
+            matrixHtml += `</tbody></table></div>`
+
+            globalStiffnessMatrixContainer.innerHTML = matrixHtml + checkButtonHtml
+            globalStiffnessMatrixContainer.classList.remove("hidden")
+            document.getElementById("checkMatrixButton").addEventListener("click", checkGlobalStiffnessMatrix)
+          }
+
+          elementAnalysisContainer2.innerHTML = ""
+
+          //Jumping back
+          //document.getElementById("next-step-info-container").scrollIntoView()
+          // Check if all elements have been processed
+
+          if (currentElementIndex === 4) {
+            nextStepButton.textContent = "Next Step"
+            currentElementIndex++
+          } else {
+            currentElementIndex++
+            nextStepButton.textContent = `Next Step (Element ${currentElementIndex + 1})`
+          }
+        }
+        const checkGlobalStiffnessMatrix = () => {
+          let allCorrect = true
+          let allValues = true
+          for (let i = 0; i < 4; i++) {
+            for (let j = 0; j < 4; j++) {
+              const inputElement = document.getElementById(`k-${i}-${j}`)
+              const inputValue = parseFloat(inputElement.value)
+              const correctValue = globalStiffnessMatrix[i][j]
+
+              inputElement.classList.remove("red-text")
+
+              if (isNaN(inputValue)) {
+                allValues = false
+                allCorrect = false
+              }
+              //-- CHANGE TOLERANCE IF NEEDED -- Global Stiffness Matrix
+              if (Math.abs(inputValue - correctValue) > 1e-2) {
+                inputElement.classList.add("red-text")
+                allCorrect = false
+              }
+            }
+          }
+
+          if (allCorrect) {
+            showMessage("The Global Stiffness Matrix is correct! \nYou may now proceed to the next steps.")
+
+            // Hide the check button and show the next-step button
+            document.getElementById("checkMatrixButton").style.display = "none"
+            nextStepButtonContainer.classList.remove("hidden")
+            if (currentElementIndex >= totalElements) {
+              nextStepButton.textContent = "Next Step (Final Steps)"
+            }
+
+            // You can also change the display of the inputs to be non-editable for final confirmation
+            for (let i = 0; i < 4; i++) {
+              for (let j = 0; j < 4; j++) {
+                document.getElementById(`k-${i}-${j}`).disabled = true
+              }
+            }
+            nextStepButton.disabled = false
+            nextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+          } else {
+            if (!allValues) {
+              showMessage("Some values in the Global Stiffness Matrix are missing. Please complete the Matrix.")
+            } else {
+              showMessage("Some values in the Global Stiffness Matrix are incorrect. Please correct the highlighted entries.")
+
+              nextStepButton.disabled = true
+              nextStepButton.classList.add("opacity-50", "cursor-not-allowed")
+            }
+          }
+        }
+
+        //Load Vector
+
+        const displayLoadVector = () => {
+          globalLoads = [0, forceF1, 0, forceF2]
+          if (iSolution.loadVector === 1) {
+            loadVectorContainer.classList.remove("hidden")
+
+            // Set the load vector values based on the input forces
+            // Node 1 is fixed (iFixed=0), so its force is unknown (Reaction force) and set to 0 in the load vector.
+            // F1 is applied at Node 2 (index 1).
+            // F2 is applied at Node 4 (index 3).
+            // Node 3 (index 2) has no external force.
+
+            let matrixHtml = `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               \\{F\\} =
+                               \\begin{bmatrix}
+                               ${globalLoads[0]} \\\\
+                               ${globalLoads[1]} \\\\
+                               ${globalLoads[2]} \\\\
+                               ${globalLoads[3]}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("load-vector").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+            displayReducedStiffnessMatrix()
+          } else {
+            loadVectorContainer.classList.remove("hidden")
+            const checkButtonHtml = `<div class="mt-4 text-center">
+            <button id="checkVectorButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+            	Check Load Vector
+            </button>
+            </div>`
+
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Enter the Load Vector</h2>`
+            matrixHtml += `<div class="mx-auto p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200"><tbody>`
+
+            for (let j = 0; j < 4; j++) {
+              matrixHtml += `<tr>
+                           <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-700 flex justify-center items-center">
+            	<input type="number" step="any" id="v-${j}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            </td>
+                       </tr>`
+            }
+
+            matrixHtml += `</tbody></table></div>`
+            document.getElementById("load-vector").innerHTML = matrixHtml + checkButtonHtml
+            document.getElementById("checkVectorButton").addEventListener("click", checkLoadVector)
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+          }
+        }
+        const checkLoadVector = () => {
+          let allValues = true
+          let allCorrect = true
+
+          for (let j = 0; j < 4; j++) {
+            const inputElement = document.getElementById(`v-${j}`)
+            const inputValue = parseFloat(inputElement.value)
+            const correctValue = globalLoads[j]
+
+            inputElement.classList.remove("red-text")
+
+            if (isNaN(inputValue)) {
+              allValues = false
+              allCorrect = false
+            }
+            //-- CHANGE TOLERANCE IF NEEDED -- Load Vector
+            if (Math.abs(inputValue - correctValue) > 1e-2) {
+              inputElement.classList.add("red-text")
+              allCorrect = false
+            }
+          }
+
+          if (allCorrect) {
+            showMessage("The Load Vector is correct! \nYou may now proceed to the next steps.")
+
+            // Hide the check button and show the next-step button
+            document.getElementById("checkVectorButton").style.display = "none"
+
+            // You can also change the display of the inputs to be non-editable for final confirmation
+
+            let matrixHtml = `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               \\{F\\} =
+                               \\begin{bmatrix}
+                               ${globalLoads[0]} \\\\
+                               ${globalLoads[1]} \\\\
+                               ${globalLoads[2]} \\\\
+                               ${globalLoads[3]}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("load-vector").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+
+            //nextStepButton.disabled = false
+            //nextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+            displayReducedStiffnessMatrix()
+          } else {
+            if (!allValues) {
+              showMessage("Some values in Load Vector are missing. Please complete the Vector.")
+            } else {
+              showMessage("Some values in Load Vector are incorrect. Please correct the highlighted entries.")
+
+              //nextStepButton.disabled = true
+              //nextStepButton.classList.add("opacity-50", "cursor-not-allowed")
+            }
+          }
+        }
+        let reducedMatrix
+        const displayReducedStiffnessMatrix = () => {
+          // Create a copy of the global stiffness matrix
+          reducedMatrix = globalStiffnessMatrix.map(row => [...row])
+
+          // Remove the fixed row and column
+
+          reducedMatrix.splice(2, 1)
+          reducedMatrix = reducedMatrix.map(row => {
+            row.splice(iFixed, 1) //
+            return row
+          })
+          // Reduced Stiffness Skip
+
+          if (iSolution.reducedStiffness === 1) {
+            reducedMatrixContainer.classList.remove("hidden")
+
+            let matrixHtml = `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               K_{reduced} =
+                               \\begin{bmatrix}
+                               ${reducedMatrix.map(row => row.map(val => val.toFixed(2)).join(" & ")).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("reduced-matrix").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+            displayReducedLoadVector()
+          } else {
+            const checkButtonHtml = `<div class="mt-4 text-center">
+            <button id="checkReducedMatrixButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+            	Check Reduced Stiffness Matrix
+            </button>
+            </div>`
+            reducedMatrixContainer.innerHTML = ""
+
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Enter the Reduced Stiffness Matrix</h2>`
+            matrixHtml += `<div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200"><tbody>`
+
+            for (let i = 0; i < 3; i++) {
+              matrixHtml += `<tr>`
+              for (let j = 0; j < 3; j++) {
+                matrixHtml += `<td class="px-2 py-2 whitespace-nowrap text-sm text-gray-700">
+            		<input type="number" step="any" id="red-${i}-${j}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            	</td>`
+              }
+              matrixHtml += `</tr>`
+            }
+
+            matrixHtml += `</tbody></table></div>`
+
+            reducedMatrixContainer.innerHTML = matrixHtml + checkButtonHtml
+            reducedMatrixContainer.classList.remove("hidden")
+            document.getElementById("checkReducedMatrixButton").addEventListener("click", checkReducedStiffnessMatrix)
+          }
+        }
+        const checkReducedStiffnessMatrix = () => {
+          let allCorrect = true
+          let allValues = true
+          for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+              const inputElement = document.getElementById(`red-${i}-${j}`)
+              const inputValue = parseFloat(inputElement.value)
+              const correctValue = reducedMatrix[i][j]
+
+              inputElement.classList.remove("red-text")
+
+              if (isNaN(inputValue)) {
+                allValues = false
+                allCorrect = false
+              }
+              //-- CHANGE TOLERANCE IF NEEDED  -- Reduced Stiffness Matrix
+              if (Math.abs(inputValue - correctValue) > 1e-2) {
+                inputElement.classList.add("red-text")
+                allCorrect = false
+              }
+            }
+          }
+
+          if (allCorrect) {
+            showMessage("The Reduced Stiffness Matrix is correct! \nYou may now proceed to the next steps.")
+
+            // Hide the check button and show the next-step button
+            document.getElementById("checkReducedMatrixButton").style.display = "none"
+            nextStepButtonContainer.classList.remove("hidden")
+
+            // You can also change the display of the inputs to be non-editable for final confirmation
+            for (let i = 0; i < 3; i++) {
+              for (let j = 0; j < 3; j++) {
+                document.getElementById(`red-${i}-${j}`).disabled = true
+              }
+            }
+            reducedMatrixContainer.classList.remove("hidden")
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Reduced Stiffness Matrix</h2>`
+            matrixHtml += `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               K_{reduced} =
+                               \\begin{bmatrix}
+                               ${reducedMatrix.map(row => row.map(val => val.toFixed(2)).join(" & ")).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            reducedMatrixContainer.innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+            nextStepButton.disabled = false
+            nextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+            displayReducedLoadVector()
+          } else {
+            if (!allValues) {
+              showMessage("Some values in the Reduced Stiffness Matrix are missing. Please complete the Matrix.")
+            } else {
+              showMessage("Some values in the Reduced Stiffness Matrix are incorrect. Please correct the highlighted entries.")
+
+              nextStepButton.disabled = true
+              nextStepButton.classList.add("opacity-50", "cursor-not-allowed")
+            }
+          }
+        }
+        let reducedLoads = []
+        const displayReducedLoadVector = () => {
+          // Reduced Load Vector Skip
+
+          reducedLoads = [...globalLoads]
+
+          reducedLoads.splice(iFixed, 1)
+          if (iSolution.reducedLoadVector === 1) {
+            reducedLoadVectorContainer.classList.remove("hidden")
+
+            // Create a copy of the global load vector and remove the element at the fixed node index.
+
+            let matrixHtml = `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               \\{F\\}_{reduced} =
+                               \\begin{bmatrix}
+                               ${reducedLoads.map(val => val.toFixed(2)).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("reduced-load-vector").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+            displayInversedStiffnessMatrix()
+          } else {
+            reducedLoadVectorContainer.classList.remove("hidden")
+            const checkButtonHtml = `<div class="mt-4 text-center">
+            <button id="checkLoadVectorButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+            	Check Reduced Load Vector
+            </button>
+            </div>`
+
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Enter the Reduced Load Vector</h2>`
+            matrixHtml += `<div class="mx-auto p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200"><tbody>`
+
+            for (let j = 0; j < 3; j++) {
+              matrixHtml += `<tr>
+                           <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-700 flex justify-center items-center">
+            	<input type="number" step="any" id="rv-${j}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            </td>
+                       </tr>`
+            }
+
+            matrixHtml += `</tbody></table></div>`
+            document.getElementById("reduced-load-vector").innerHTML = matrixHtml + checkButtonHtml
+            document.getElementById("checkLoadVectorButton").addEventListener("click", checkReducedLoadVector)
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+          }
+
+          if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise()
+          }
+        }
+        const checkReducedLoadVector = () => {
+          let allValues = true
+          let allCorrect = true
+
+          for (let j = 0; j < 3; j++) {
+            const inputElement = document.getElementById(`rv-${j}`)
+            const inputValue = parseFloat(inputElement.value)
+            const correctValue = reducedLoads[j]
+
+            inputElement.classList.remove("red-text")
+
+            if (isNaN(inputValue)) {
+              allValues = false
+              allCorrect = false
+            }
+            //-- CHANGE TOLERANCE IF NEEDED -- Reduced Load Vector
+            if (Math.abs(inputValue - correctValue) > 1e-2) {
+              inputElement.classList.add("red-text")
+              allCorrect = false
+            }
+          }
+
+          if (allCorrect) {
+            showMessage("The Reduced Load Vector is correct! \nYou may now proceed to the next steps.")
+
+            // Hide the check button and show the next-step button
+            document.getElementById("checkLoadVectorButton").style.display = "none"
+
+            // You can also change the display of the inputs to be non-editable for final confirmation
+
+            let matrixHtml = `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               \\{F\\}_{reduced} =
+                               \\begin{bmatrix}
+                               ${reducedLoads.map(val => val.toFixed(2)).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("reduced-load-vector").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+
+            nextStepButton.disabled = false
+            nextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+
+            displayInversedStiffnessMatrix()
+          } else {
+            if (!allValues) {
+              showMessage("Some values in Reduced Load Vector are missing. Please complete the Vector.")
+            } else {
+              showMessage("Some values in Reduced Load Vector are incorrect. Please correct the highlighted entries.")
+
+              nextStepButton.disabled = true
+              nextStepButton.classList.add("opacity-50", "cursor-not-allowed")
+            }
+          }
+        }
+
+        const displayInversedStiffnessMatrix = () => {
+          inversedMatrixContainer.classList.remove("hidden")
+
+          let reducedMatrix = globalStiffnessMatrix.map(row => [...row])
+          reducedMatrix.splice(iFixed, 1)
+          reducedMatrix = reducedMatrix.map(row => {
+            row.splice(iFixed, 1)
+            return row
+          })
+
+          const mat = reducedMatrix
+          const size = mat.length
+
+          if (size !== 3) {
+            // This simple inversion method only works for a 3x3 matrix, which is what we get here
+            document.getElementById("inversed-matrix").innerHTML = '<p class="text-red-500">Inversion calculation not implemented for non-3x3 matrices.</p>'
+            return
+          }
+
+          // Invert a 3x3 matrix using the adjugate method
+          const a = mat[0][0],
+            b = mat[0][1],
+            c = mat[0][2]
+          const d = mat[1][0],
+            e = mat[1][1],
+            f = mat[1][2]
+          const g = mat[2][0],
+            h = mat[2][1],
+            i = mat[2][2]
+
+          const determinant = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
+
+          if (Math.abs(determinant) < 1e-9) {
+            document.getElementById("inversed-matrix").innerHTML = '<p class="text-red-500">Matrix is singular and cannot be inverted.</p>'
+            return
+          }
+
+          const invDeterminant = 1 / determinant
+
+          const inversedMatrix = [
+            [(e * i - f * h) * invDeterminant, (c * h - b * i) * invDeterminant, (b * f - c * e) * invDeterminant],
+            [(f * g - d * i) * invDeterminant, (a * i - c * g) * invDeterminant, (c * d - a * f) * invDeterminant],
+            [(d * h - e * g) * invDeterminant, (b * g - a * h) * invDeterminant, (a * e - b * d) * invDeterminant]
+          ]
+
+          // Store the inversed matrix globally to be used for the next step
+          window.inversedMatrix = inversedMatrix
+
+          // Inversed Stiffness Matrix Skip
+
+          if (iSolution.inversedStiffness === 1) {
+            let matrixHtml = `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               [K_{reduced}]^{-1} =
+                               \\begin{bmatrix}
+                               ${inversedMatrix.map(row => row.map(val => val.toExponential(4)).join(" & ")).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("inversed-matrix").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+            displayDisplacements()
+          } else {
+            const checkButtonHtml = `<div class="mt-4 text-center">
+            <button id="checkInversedMatrixButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+            	Check Inversed Stiffness Matrix
+            </button>
+            </div>`
+            inversedMatrixContainer.innerHTML = ""
+
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Enter the Inversed Stiffness Matrix</h2>`
+            matrixHtml += `<div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200"><tbody>`
+
+            for (let i = 0; i < 3; i++) {
+              matrixHtml += `<tr>`
+              for (let j = 0; j < 3; j++) {
+                matrixHtml += `<td class="px-2 py-2 whitespace-nowrap text-sm text-gray-700">
+            		<input type="number" step="any" id="inv-${i}-${j}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            	</td>`
+              }
+              matrixHtml += `</tr>`
+            }
+
+            matrixHtml += `</tbody></table></div>`
+
+            inversedMatrixContainer.innerHTML = matrixHtml + checkButtonHtml
+            inversedMatrixContainer.classList.remove("hidden")
+            document.getElementById("checkInversedMatrixButton").addEventListener("click", checkInversedStiffnessMatrix)
+          }
+        }
+
+        const checkInversedStiffnessMatrix = () => {
+          let allCorrect = true
+          let allValues = true
+          for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 3; j++) {
+              const inputElement = document.getElementById(`inv-${i}-${j}`)
+              const inputValue = parseFloat(inputElement.value)
+              const correctValue = inversedMatrix[i][j]
+
+              inputElement.classList.remove("red-text")
+
+              if (isNaN(inputValue)) {
+                allValues = false
+                allCorrect = false
+              }
+              //-- CHANGE TOLERANCE IF NEEDED -- Inversed Stiffness Matrix
+              if (Math.abs(inputValue - correctValue) > 1e-2) {
+                inputElement.classList.add("red-text")
+                allCorrect = false
+              }
+            }
+          }
+
+          if (allCorrect) {
+            showMessage("The Inversed Stiffness Matrix is correct! \nYou may now proceed to the next steps.")
+
+            // Hide the check button and show the next-step button
+            document.getElementById("checkInversedMatrixButton").style.display = "none"
+            nextStepButtonContainer.classList.remove("hidden")
+
+            // You can also change the display of the inputs to be non-editable for final confirmation
+            for (let i = 0; i < 3; i++) {
+              for (let j = 0; j < 3; j++) {
+                document.getElementById(`inv-${i}-${j}`).disabled = true
+              }
+            }
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Inversed Stiffness Matrix</h2>`
+            matrixHtml += `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               [K_{reduced}]^{-1} =
+                               \\begin{bmatrix}
+                               ${inversedMatrix.map(row => row.map(val => val.toExponential(4)).join(" & ")).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            inversedMatrixContainer.innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+            displayDisplacements()
+          } else {
+            if (!allValues) {
+              showMessage("Some values in the Reduced Stiffness Matrix are missing. Please complete the Matrix.")
+            } else {
+              showMessage("Some values in the Reduced Stiffness Matrix are incorrect. Please correct the highlighted entries.")
+
+              nextStepButton.disabled = true
+              nextStepButton.classList.add("opacity-50", "cursor-not-allowed")
+            }
+          }
+        }
+
+        const displayDisplacements = () => {
+          displacementsContainer.classList.remove("hidden")
+
+          // Get the reduced load vector
+          let reducedLoads = [...globalLoads]
+          reducedLoads.splice(iFixed, 1)
+
+          const displacements = [0, 0, 0]
+          const size = reducedLoads.length
+
+          // Perform matrix-vector multiplication: {u} = [K]^-1 * {F}
+          for (let i = 0; i < size; i++) {
+            let sum = 0
+            for (let j = 0; j < size; j++) {
+              sum += inversedMatrix[i][j] * reducedLoads[j]
+            }
+            displacements[i] = sum
+          }
+
+          // Store the calculated displacements globally for the next step
+          window.unknownDisplacements = displacements
+
+          if (iSolution.unknownDisplacements === 1) {
+            let matrixHtml = `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               \\{u\\}_{reduced} = [K_{reduced}]^{-1} \\times \\{F\\}_{reduced} =
+                               \\begin{bmatrix}
+                               ${displacements.map(val => val.toExponential(4)).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("displacements").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+
+            displayFullDisplacements()
+          } else {
+            displacementsContainer.classList.remove("hidden")
+            const checkButtonHtml = `<div class="mt-4 text-center">
+            <button id="checkDisplacementsButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+            	Check Unknown Displacements
+            </button>
+            </div>`
+
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Enter the Unknown Displacements $$
+                               \\{u\\}_{reduced} = [K_{reduced}]^{-1} \\times \\{F\\}_{reduced}$$</h2>`
+            matrixHtml += `<div class="mx-auto p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200"><tbody>`
+
+            for (let j = 0; j < 3; j++) {
+              matrixHtml += `<tr>
+                           <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-700 flex justify-center items-center">
+            	<input type="number" step="any" id="ud-${j}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            </td>
+                       </tr>`
+            }
+
+            matrixHtml += `</tbody></table></div>`
+            document.getElementById("displacements-container").innerHTML = matrixHtml + checkButtonHtml
+            document.getElementById("checkDisplacementsButton").addEventListener("click", checkDisplacements)
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+          }
+
+          if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise()
+          }
+        }
+        const checkDisplacements = () => {
+          let allValues = true
+          let allCorrect = true
+
+          for (let j = 0; j < 3; j++) {
+            const inputElement = document.getElementById(`ud-${j}`)
+            const inputValue = parseFloat(inputElement.value)
+            const correctValue = window.unknownDisplacements[j]
+            //remove later
+            console.log(correctValue)
+
+            inputElement.classList.remove("red-text")
+
+            if (isNaN(inputValue)) {
+              allValues = false
+              allCorrect = false
+            }
+            //-- CHANGE TOLERANCE IF NEEDED -- Displacement Vector
+            if (Math.abs(inputValue - correctValue) > 1e-2) {
+              inputElement.classList.add("red-text")
+              allCorrect = false
+            }
+          }
+
+          if (allCorrect) {
+            showMessage("The Unknown Displacements Vector is correct! \nYou may now proceed to the next steps.")
+
+            // Hide the check button and show the next-step button
+            document.getElementById("checkDisplacementsButton").style.display = "none"
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Unknown Displacements
+                               </h2>`
+            matrixHtml += `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               \\{u\\}_{reduced} = [K_{reduced}]^{-1} \\times \\{F\\}_{reduced} =
+                               \\begin{bmatrix}
+                               ${window.unknownDisplacements.map(val => val.toExponential(4)).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("displacements-container").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+
+            displayFullDisplacements()
+          } else {
+            if (!allValues) {
+              showMessage("Some values in Unknown Displacements are missing. Please complete the Vector.")
+            } else {
+              showMessage("Some values in Unknown Displacements are incorrect. Please correct the highlighted entries.")
+            }
+          }
+        }
+        let fullDisplacements
+        const displayFullDisplacements = () => {
+          fullDisplacementsContainer.classList.remove("hidden")
+
+          const unknownDisplacements = window.unknownDisplacements
+          if (!unknownDisplacements) {
+            document.getElementById("full-displacements").innerHTML = '<p class="text-red-500">Unknown displacements not available. Please run previous steps.</p>'
+            return
+          }
+
+          // Create a new array and insert 0 at the fixed position
+          fullDisplacements = [...unknownDisplacements]
+          fullDisplacements.splice(iFixed, 0, 0)
+          globalDisplacements = fullDisplacements
+          if (iSolution.fullDisplacements === 1) {
+            let matrixHtml = `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               \\{u\\} =
+                               \\begin{bmatrix}
+                               ${fullDisplacements.map(val => val.toExponential(4)).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("full-displacements").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+            currentElementIndex = 1
+            resultsNextStepButtonContainer.classList.remove("hidden")
+            elementResultsContainer.classList.remove("hidden")
+            resultsNextStepButton.classList.remove("hidden")
+            resultsNextStepButton.disabled = false
+            resultsNextStepButton.textContent = `Next Step (Element ${currentElementIndex + 1})`
+            resultsNextStepButton.addEventListener("click", () => {
+              showElementResults()
+            })
+
+            showElementResults()
+          } else {
+            fullDisplacementsContainer.classList.remove("hidden")
+
+            const checkButtonHtml = `<div class="mt-4 text-center">
+            <button id="checkFullDisplacementsButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+            	Check Displacement Vector
+            </button>
+            </div>`
+
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Enter the Displacement Vector</h2>`
+            matrixHtml += `<div class="mx-auto p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200"><tbody>`
+
+            for (let j = 0; j < 4; j++) {
+              matrixHtml += `<tr>
+                           <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-700 flex justify-center items-center">
+            	<input type="number" step="any" id="fd-${j}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            </td>
+                       </tr>`
+            }
+
+            matrixHtml += `</tbody></table></div>`
+            document.getElementById("full-displacements-container").innerHTML = matrixHtml + checkButtonHtml
+            document.getElementById("checkFullDisplacementsButton").addEventListener("click", checkFullDisplacements)
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+          }
+
+          if (window.MathJax && MathJax.typesetPromise) {
+            MathJax.typesetPromise()
+          }
+        }
+
+        const checkFullDisplacements = () => {
+          let allValues = true
+          let allCorrect = true
+
+          for (let j = 0; j < 4; j++) {
+            const inputElement = document.getElementById(`fd-${j}`)
+            const inputValue = parseFloat(inputElement.value)
+            const correctValue = fullDisplacements[j]
+            //remove later
+            console.log(correctValue)
+
+            inputElement.classList.remove("red-text")
+
+            if (isNaN(inputValue)) {
+              allValues = false
+              allCorrect = false
+            }
+            //-- CHANGE TOLERANCE IF NEEDED -- Full Displacement Vector
+            if (Math.abs(inputValue - correctValue) > 1e-2) {
+              inputElement.classList.add("red-text")
+              allCorrect = false
+            }
+          }
+
+          if (allCorrect) {
+            showMessage("The Full Displacement Vector is correct! \nYou may now proceed to the next steps.")
+            resultsNextStepButton.disabled = false
+            resultsNextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+            // Hide the check button and show the next-step button
+            document.getElementById("checkFullDisplacementsButton").style.display = "none"
+            let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Displacement Vector:</h2>`
+            matrixHtml += `
+                           <div class="p-4 bg-gray-100 rounded-lg overflow-x-auto">
+                               $$
+                               \\{u\\} =
+                               \\begin{bmatrix}
+                               ${fullDisplacements.map(val => val.toExponential(4)).join(" \\\\ ")}
+                               \\end{bmatrix}
+                               $$
+                           </div>
+                       `
+            document.getElementById("full-displacements-container").innerHTML = matrixHtml
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+
+            currentElementIndex = 1
+
+            resultsNextStepButtonContainer.classList.remove("hidden")
+            elementResultsContainer.classList.remove("hidden")
+            resultsNextStepButton.classList.remove("hidden")
+            resultsNextStepButton.disabled = false
+            resultsNextStepButton.textContent = `Next Step (Element ${currentElementIndex + 1})`
+            resultsNextStepButton.addEventListener("click", () => {
+              showElementResults()
+            })
+            showElementResults()
+          } else {
+            if (!allValues) {
+              showMessage("Some values in the Displacement Vector are missing. Please complete the Vector.")
+            } else {
+              showMessage("Some values in the Displacement Vector are incorrect. Please correct the highlighted entries.")
+            }
+          }
+        }
+        const checkAllAnswers = (uvalues, fvalues, stress, elementNumber, elementData) => {
+          console.log(uvalues, fvalues, stress, elementNumber)
+          let allValues = true
+          let allCorrect = true
+
+          for (let j = 0; j < 2; j++) {
+            const inputElement1 = document.getElementById(`nd-${elementNumber}-${j}`)
+            const inputElement2 = document.getElementById(`lv-${elementNumber}-${j}`)
+
+            const inputValue1 = parseFloat(inputElement1.value)
+            const inputValue2 = parseFloat(inputElement2.value)
+            const correctValue1 = uvalues[j]
+            const correctValue2 = fvalues[j]
+
+            if (isNaN(inputValue1) || isNaN(inputValue2)) {
+              allValues = false
+              allCorrect = false
+            } else {
+              //-- CHANGE TOLERANCE IF NEEDED -- Nodal Displacement
+              if (Math.abs(inputValue1 - correctValue1) > 1e-2) {
+                inputElement1.classList.add("red-text")
+                allCorrect = false
+              }
+              //-- CHANGE TOLERANCE IF NEEDED -- Load Vector
+              if (Math.abs(inputValue2 - correctValue2) > 1e-2) {
+                inputElement2.classList.add("red-text")
+                allCorrect = false
+              }
+            }
+          }
+          const inputElement3 = document.getElementById(`sigma-${elementNumber}`)
+          const inputValue3 = parseFloat(inputElement3.value)
+          const correctValue3 = stress
+          if (isNaN(inputValue3)) {
+            allValues = false
+            allCorrect = false
+          } else {
+            //-- CHANGE TOLERANCE IF NEEDED -- Stress
+            if (Math.abs(inputValue3 - correctValue3) > 1e-2) {
+              inputElement3.classList.add("red-text")
+              allCorrect = false
+            }
+          }
+
+          if (allCorrect) {
+            showMessage("You may now proceed to the next steps.")
+
+            // Hide the check button and show the next-step button
+            document.getElementById("checkAllAnswersButton").classList.add("hidden")
+            resultsNextStepButton.disabled = false
+            resultsNextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+
+            const elementNodalDisplacementsText = `
+                               <h3 class="text-lg font-bold text-gray-800 mb-2">Nodal Displacements ($\{u\}^e$):</h3>
+                               $$
+                               \\{u\\}^{${elementNumber}} =
+                               \\begin{bmatrix}
+                               u_{${elementData.node1}} \\\\
+                               u_{${elementData.node2}}
+                               \\end{bmatrix} =
+                               \\begin{bmatrix}
+                               ${uvalues[0].toExponential(4)} \\\\
+                               ${uvalues[1].toExponential(4)}
+                               \\end{bmatrix}
+                               $$
+                           `
+            elementNodalDisplacements.innerHTML = elementNodalDisplacementsText
+
+            const elementLoadVectorText = `
+                               <h3 class="text-lg font-bold text-gray-800 mb-2">Element Load Vector ($\{f\}^e$):</h3>
+                               $$
+                               \\{f\\}^{${elementNumber}} = [K]^e \\{u\\}^e =
+                               \\begin{bmatrix}
+                               k & -k \\\\
+                               -k & k
+                               \\end{bmatrix}
+                               \\begin{bmatrix}
+                               u_{${elementData.node1}} \\\\
+                               u_{${elementData.node2}}
+                               \\end{bmatrix} =
+                               \\begin{bmatrix}
+                               ${fvalues[0].toExponential(4)} \\\\
+                               ${fvalues[1].toExponential(4)}
+                               \\end{bmatrix}
+                               $$
+                           `
+            elementLoadVector.innerHTML = elementLoadVectorText
+
+            const elementStressText = `
+                               <h3 class="text-lg font-bold text-gray-800 mb-2">Element Stress ($\sigma$):</h3>
+                               $$
+                               \\sigma^{${elementNumber}} = \\frac{E}{L} (u_2 - u_1) = ${stress.toExponential(4)} \\text{[Pa]}
+                               $$
+                           `
+            elementStress.innerHTML = elementStressText
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise()
+            }
+          } else {
+            if (!allValues) {
+              showMessage("Some values are missing.")
+            } else {
+              showMessage("Some values are incorrect.")
+            }
+          }
+        }
+        const showElementResults = () => {
+          resultsNextStepButton.disabled = true
+          resultsNextStepButton.classList.add("opacity-50", "cursor-not-allowed")
+          if (currentElementIndex <= totalElements) {
+            const elementNumber = currentElementIndex
+            const elementData = globalConnectivity[elementNumber - 1]
+            const node1Index = elementData.node1 - 1
+            const node2Index = elementData.node2 - 1
+
+            const u1 = globalDisplacements[node1Index]
+            const u2 = globalDisplacements[node2Index]
+            const E = globalStiffnesses[elementNumber - 1] * 10 ** 9
+            const A = globalAreas[elementNumber - 1] * 10 ** -6
+            const L = Math.abs(globalNodes[node2Index].x - globalNodes[node1Index].x)
+
+            const ke = (E * A) / L
+            const f1 = ke * (u1 - u2)
+            const f2 = ke * (u2 - u1)
+
+            const stress = (E / L) * (u2 - u1)
+            //Element Nodal Displacements
+
+            if (iSolution.finalSteps === 1) {
+              //Esto carga las respuestas correctas, si iSolution es 1
+
+              const elementNodalDisplacementsText = `
+                               <h3 class="text-lg font-bold text-gray-800 mb-2">Nodal Displacements ($\{u\}^e$):</h3>
+                               $$
+                               \\{u\\}^{${elementNumber}} =
+                               \\begin{bmatrix}
+                               u_{${elementData.node1}} \\\\
+                               u_{${elementData.node2}}
+                               \\end{bmatrix} =
+                               \\begin{bmatrix}
+                               ${u1.toExponential(4)} \\\\
+                               ${u2.toExponential(4)}
+                               \\end{bmatrix}
+                               $$
+                           `
+              elementNodalDisplacements.innerHTML = elementNodalDisplacementsText
+
+              const elementLoadVectorText = `
+                               <h3 class="text-lg font-bold text-gray-800 mb-2">Element Load Vector ($\{f\}^e$):</h3>
+                               $$
+                               \\{f\\}^{${elementNumber}} = [K]^e \\{u\\}^e =
+                               \\begin{bmatrix}
+                               k & -k \\\\
+                               -k & k
+                               \\end{bmatrix}
+                               \\begin{bmatrix}
+                               u_{${elementData.node1}} \\\\
+                               u_{${elementData.node2}}
+                               \\end{bmatrix} =
+                               \\begin{bmatrix}
+                               ${f1.toExponential(4)} \\\\
+                               ${f2.toExponential(4)}
+                               \\end{bmatrix}
+                               $$
+                           `
+              elementLoadVector.innerHTML = elementLoadVectorText
+
+              const elementStressText = `
+                               <h3 class="text-lg font-bold text-gray-800 mb-2">Element Stress ($\sigma$):</h3>
+                               $$
+                               \\sigma^{${elementNumber}} = \\frac{E}{L} (u_2 - u_1) = ${stress.toExponential(4)} \\text{ Pa}
+                               $$
+                           `
+              elementStress.innerHTML = elementStressText
+              MathJax.typeset()
+              resultsNextStepButton.disabled = false
+              resultsNextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+            } else {
+              //Aqui van los formularios
+
+              const checkButtonHtml = `<div class="mt-4 text-center">
+            <button id="checkAllAnswersButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition ease-in-out duration-150">
+            	Check
+            </button>
+            </div>`
+
+              let matrixHtml = `<h2 class="text-xl font-bold text-gray-800 mb-4">Nodal Displacement:</h2>`
+              matrixHtml += `<div class="mx-auto p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200"><tbody>`
+
+              for (let j = 0; j < 2; j++) {
+                matrixHtml += `<tr>
+                           <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-700 flex justify-center items-center">
+            	<input type="number" step="any" id="nd-${elementNumber}-${j}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            </td>
+                       </tr>`
+              }
+
+              matrixHtml += `</tbody></table></div>`
+              document.getElementById("element-nodal-displacements").innerHTML = matrixHtml
+
+              let matrixHtml2 = `
+                               <h3 class="text-lg font-bold text-gray-800 mb-2">Element Load Vector ($\{f\}^e$):</h3>
+                              `
+              matrixHtml2 += `<div class="mx-auto p-4 bg-gray-100 rounded-lg overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200"><tbody>`
+
+              for (let j = 0; j < 2; j++) {
+                matrixHtml2 += `<tr>
+                           <td class="px-2 py-2 whitespace-nowrap text-sm text-gray-700 flex justify-center items-center">
+            	<input type="number" step="any" id="lv-${elementNumber}-${j}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            </td>
+                       </tr>`
+              }
+
+              matrixHtml2 += `</tbody></table></div>`
+              elementLoadVector.innerHTML = matrixHtml2
+              let matrixHtml3 = `
+                               <h3 class="text-lg font-bold text-gray-800 mb-2">Element Stress ($\sigma$):</h3>
+                              
+                           `
+
+              matrixHtml3 += `
+            	<div class="flex justify-center mx-auto p-4 bg-gray-100 rounded-lg overflow-x-auto"><input type="number" step="any" id="sigma-${elementNumber}" class="w-36 border border-gray-300 rounded-md p-1 text-center" />
+            </div>`
+
+              elementStress.innerHTML = matrixHtml3
+              const tempDiv = document.createElement("div")
+              tempDiv.innerHTML = checkButtonHtml
+
+              // Inserta el botón después de elementStress
+              elementStress.parentNode.insertBefore(tempDiv.firstElementChild, elementStress.nextSibling)
+
+              if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise()
+              }
+              document.getElementById("checkAllAnswersButton").addEventListener("click", () => checkAllAnswers([u1, u2], [f1, f2], stress, elementNumber, elementData))
+            }
+
+            elementResultsTitle.textContent = `Element ${elementNumber} Results`
+            resultsNextStepButton.textContent = `Next Step (Element ${elementNumber + 1})`
+
+            currentElementIndex++
+            if (currentElementIndex > totalElements) {
+              resultsNextStepButton.disabled = true
+              resultsNextStepButton.classList.add("opacity-50", "cursor-not-allowed")
+              resultsNextStepButton.textContent = "All Elements Processed"
+            }
+
+            if (window.MathJax && MathJax.typesetPromise) {
+              MathJax.typesetPromise([elementResultsContainer])
+            }
+          }
+        }
+
+        // Reset all values on regenerate
+        const resetApp = () => {
+          createNodeTable()
+          createRodTable()
+          solutionSection.classList.add("hidden") // Hide solution section on regenerate
+          nextStepInfoContainer.classList.add("hidden") // Hide next step info container on regenerate
+          nextStepButtonContainer.classList.add("hidden") // Hide the Next Step button for global assembly
+          elementNextStepButtonContainer.classList.add("hidden") // Hide the Next Step button for element analysis
+          elementResultsContainer.classList.add("hidden") // Hide the element results container
+          finalMessageContainer.classList.add("hidden") // Hide final message on regenerate
+          reducedMatrixContainer.classList.add("hidden") // Hide reduced matrix on regenerate
+          loadVectorContainer.classList.add("hidden") // Hide load vector container
+          reducedLoadVectorContainer.classList.add("hidden") // Hide reduced load vector container
+          inversedMatrixContainer.classList.add("hidden") // Hide inversed matrix container
+          displacementsContainer.classList.add("hidden") // Hide displacements container
+          fullDisplacementsContainer.classList.add("hidden") // Hide full displacements container
+          globalStiffnessMatrix = [
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+          ]
+          currentElementIndex = 0
+          nextStepButton.disabled = false
+          nextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+          elementNextStepButton.disabled = false
+          elementNextStepButton.classList.remove("opacity-50", "cursor-not-allowed")
+          connectivityCorrect = false
+
+          // Remove highlight from the matrix container
+          const matrixDiv = globalStiffnessMatrixContainer.querySelector("div")
+          if (matrixDiv) {
+            matrixDiv.classList.remove("highlight-border")
+          }
+
+          // Update the force display
+          updateForceDisplay()
+        }
+
+        // --- Figure Drawing Logic ---
+        const canvas = document.getElementById("drawingCanvas")
+        const ctx = canvas.getContext("2d")
+        const drawButton = document.getElementById("drawButton")
+        const messageBox = document.getElementById("messageBox")
+        const messageText = document.getElementById("messageText")
+        const closeMessage = document.getElementById("closeMessage")
+
+        const WALL_WIDTH = 30
+        const BAR_HEIGHT = 30
+        const VERTICAL_SPACING = 30
+        const HORIZONTAL_SPACING = 50
+        const BAR_COLOR = "#2a7c8c"
+        const LABEL_WIDTH = 30
+        const LABEL_HEIGHT = 30
+
+        const resizeCanvas = () => {
+          const container = canvas.parentElement
+          canvas.width = container.clientWidth
+          canvas.height = container.clientHeight
+          drawFigure()
+        }
+
+        const showMessage = text => {
+          messageText.textContent = text
+          messageBox.style.display = "block"
+        }
+
+        const hideMessage = () => {
+          messageBox.style.display = "none"
+        }
+
+        const drawLabeledBar = (x, y, barWidth, barHeight, labelText) => {
+          ctx.fillStyle = BAR_COLOR
+          ctx.fillRect(x, y, barWidth, barHeight)
+
+          const rectX = x + barWidth / 2 - LABEL_WIDTH / 2
+          const rectY = y + barHeight / 2 - LABEL_HEIGHT / 2
+
+          ctx.fillStyle = "white"
+          ctx.fillRect(rectX, rectY, LABEL_WIDTH, LABEL_HEIGHT)
+
+          ctx.strokeStyle = "black"
+          ctx.lineWidth = 2
+          ctx.strokeRect(rectX, rectY, LABEL_WIDTH, LABEL_HEIGHT)
+
+          ctx.fillStyle = "black"
+          ctx.font = "600 16px Inter, sans-serif"
+          ctx.textAlign = "center"
+          ctx.textBaseline = "middle"
+          ctx.fillText(labelText, rectX + LABEL_WIDTH / 2, rectY + LABEL_HEIGHT / 2)
+        }
+
+        const drawWall = (ctx, wallX, wallY, wallHeight, wallWidth, labelText) => {
+          ctx.fillStyle = "#000"
+          ctx.fillRect(wallX, wallY, wallWidth, wallHeight)
+
+          const labelRadius = 0.4 * wallWidth
+          const labelX = wallX + wallWidth * 0.45
+          const labelY = wallY - wallWidth / 2
+
+          ctx.beginPath()
+          ctx.arc(labelX, labelY, labelRadius, 0, 2 * Math.PI)
+          ctx.fillStyle = "white"
+          ctx.fill()
+          ctx.strokeStyle = "black"
+          ctx.lineWidth = 2
+          ctx.stroke()
+          ctx.fillStyle = "black"
+          ctx.font = "600 16px Inter, sans-serif"
+          ctx.textAlign = "center"
+          ctx.textBaseline = "middle"
+          ctx.fillText(labelText, labelX, labelY)
+        }
+
+        const drawHorizontalArrow = (ctx, XA, YA, LA, DY, label) => {
+          const arrowHeadLength = LA / 5
+          const arrowY = YA
+          ctx.lineWidth = 5
+          ctx.strokeStyle = "blue"
+          ctx.beginPath()
+          ctx.moveTo(XA, arrowY)
+          ctx.lineTo(XA + LA - arrowHeadLength, arrowY)
+          ctx.stroke()
+
+          ctx.beginPath()
+          ctx.moveTo(XA + LA - arrowHeadLength, arrowY - 5)
+          ctx.lineTo(XA + LA, arrowY)
+          ctx.lineTo(XA + LA - arrowHeadLength, arrowY + 5)
+          ctx.fill()
+
+          ctx.fillStyle = "blue"
+          ctx.font = "600 24px Inter, sans-serif"
+          ctx.textAlign = "center"
+          ctx.textBaseline = "top"
+          ctx.fillText(label, XA + LA / 2, YA - DY)
+        }
+
+        const drawFigure = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+          const L1 = parseFloat(l1Input.value)
+          const L2 = parseFloat(l2Input.value)
+          const L5 = parseFloat(l5Input.value)
+          forceF1 = parseFloat(f1Input.value) // Read F1 value
+          forceF2 = parseFloat(f2Input.value) // Read F2 value
+          const iFixed = 0
+
+          if (isNaN(L1) || isNaN(L2) || isNaN(L5) || L1 <= 0 || L2 <= 0 || L5 <= 0) {
+            showMessage("Please enter valid, positive numbers for all lengths.")
+            return
+          }
+          if (isNaN(forceF1) || isNaN(forceF2)) {
+            showMessage("Please enter valid numbers for F1 and F2.")
+            return
+          }
+
+          // Update the force display in the h2 tag
+          updateForceDisplay()
+
+          const LF = (L1 + L5) / 20
+          const L21 = (canvas.width / ((L1 + L5 + LF) * 1.5)) * L1 + WALL_WIDTH * 2
+          const L22 = (canvas.width / ((L1 + L5 + LF) * 1.5)) * L2
+          const L25 = (canvas.width / ((L1 + L5 + LF) * 1.5)) * L5
+          const L2F = (canvas.width / ((L1 + L5 + LF) * 1.5)) * LF
+
+          const bar1Y = BAR_HEIGHT * 2
+          const bar2Y = bar1Y + BAR_HEIGHT * 3
+          const bar3Y = bar2Y + BAR_HEIGHT * 2
+
+          const WALL_X = 0
+          const WALL_Y = BAR_HEIGHT
+          const WALL_HEIGHT = BAR_HEIGHT * 8
+          drawWall(ctx, WALL_X, WALL_Y, WALL_HEIGHT, WALL_WIDTH, "1")
+
+          const WALL_X2 = L22 + WALL_WIDTH
+          const WALL_Y2 = BAR_HEIGHT * 4
+          drawWall(ctx, WALL_X2, WALL_Y2, WALL_HEIGHT - 3 * BAR_HEIGHT, WALL_WIDTH, "2")
+
+          const WALL_X3 = L21 + WALL_WIDTH
+          const WALL_Y3 = BAR_HEIGHT
+          drawWall(ctx, WALL_X3, WALL_Y3, WALL_HEIGHT, WALL_WIDTH, "3")
+
+          const WALL_X4 = WALL_X3 + WALL_WIDTH + L25
+          const WALL_Y4 = BAR_HEIGHT
+          drawWall(ctx, WALL_X4, WALL_Y4, WALL_HEIGHT, WALL_WIDTH, "4")
+
+          const bar4X = WALL_WIDTH * 2 + L22
+          const bar4Y = bar2Y + BAR_HEIGHT
+          const bar5X = WALL_WIDTH * 2 + L21
+          const bar5Y = bar2Y
+
+          drawLabeledBar(WALL_WIDTH, bar1Y, L21, BAR_HEIGHT, "1")
+          drawLabeledBar(WALL_WIDTH, bar2Y, L22, BAR_HEIGHT, "2")
+          drawLabeledBar(WALL_WIDTH, bar3Y, L22, BAR_HEIGHT, "3")
+          drawLabeledBar(bar4X, bar4Y, L21 - L22 - WALL_WIDTH, BAR_HEIGHT, "4")
+          drawLabeledBar(bar5X, bar5Y, L25, BAR_HEIGHT, "5")
+
+          // Draw F2 force
+          let labelForce2 = "F2"
+          drawHorizontalArrow(ctx, WALL_X4 + WALL_WIDTH, bar5Y + BAR_HEIGHT / 2, L2F, BAR_HEIGHT, labelForce2)
+
+          // Draw F1 force
+          let iFixed_index = 2 // Node 3 is fixed, which is at index 2 in 0-indexed arrays
+          let iForce1_x_pos
+          let iForce1_y_pos = bar5Y + BAR_HEIGHT / 2
+
+          // Determine the x-coordinate for F1 based on Node 2's position
+          // Node 2 is at L2 from Node 1 (fixed wall 1)
+          // The wall for Node 2 is at WALL_X2. We want to draw the force at Node 2's position
+          // Node 2's graphical x-position corresponds to WALL_X2 + WALL_WIDTH/2
+          iForce1_x_pos = WALL_X2 + WALL_WIDTH / 2
+
+          let labelForce1 = "F1"
+          // Draw F1 pointing left (negative direction)
+          drawHorizontalArrow(ctx, iForce1_x_pos + L2F / 2, iForce1_y_pos, -L2F, BAR_HEIGHT, labelForce1)
+
+          let Support_x = [WALL_X, WALL_X2, WALL_X3, WALL_X4]
+          let Support_y = [WALL_Y + WALL_HEIGHT, WALL_Y2 + WALL_HEIGHT - 3 * BAR_HEIGHT, WALL_Y3 + WALL_HEIGHT, WALL_Y4 + WALL_HEIGHT]
+
+          for (let i = 0; i < Support_x.length; i++) {
+            if (i === iFixed_index) {
+              // Draw a square for fixed support (Node 3 is fixed, index 2)
+              ctx.fillRect(Support_x[i], Support_y[i], WALL_WIDTH, WALL_WIDTH)
+            } else {
+              // Draw a circle for roller support
+              ctx.beginPath()
+              ctx.arc(Support_x[i] + WALL_WIDTH / 2, Support_y[i] + WALL_WIDTH / 2, WALL_WIDTH / 2, 0, 2 * Math.PI)
+              ctx.fillStyle = "black"
+              ctx.fill()
+              ctx.strokeStyle = "black"
+              ctx.stroke()
+            }
+          }
+
+          // Draw floor
+          ctx.fillRect(0, Math.max(...Support_y) + WALL_WIDTH, canvas.width, WALL_WIDTH)
+        }
+
+        // Function to update the force display in the h2 tag
+        const updateForceDisplay = () => {
+          //forceDisplay.textContent = `The system is loaded by forces F1=${f1Input.value} and F2=${f2Input.value}`
+			forceDisplay.textContent = `The system is loaded by forces F1 and F2`
+
+        }
+
+        // Initial call to create tables and draw the figure
+        resetApp()
+        resizeCanvas()
+
+        // Event Listeners
+        regenerateButton.addEventListener("click", () => {
+          resetApp()
+          drawFigure() // Re-draw figure with new values
+        })
+        drawButton.addEventListener("click", drawFigure)
+
+        // Add event listeners for F1 and F2 inputs to redraw figure
+        f1Input.addEventListener("change", drawFigure)
+        f2Input.addEventListener("change", drawFigure)
+
+        solutionButton.addEventListener("click", () => {
+          createConnectivityTable()
+        })
+        nextStepButton.addEventListener("click", () => {
+          showNextStep()
+        })
+        elementNextStepButton.addEventListener("click", showElementResults)
+        checkConnectivityButton.addEventListener("click", checkConnectivity)
+
+        closeMessage.addEventListener("click", hideMessage)
+        window.addEventListener("resize", resizeCanvas)
+      })
+    </script>
+  </body>
+</html>
